@@ -47,10 +47,15 @@ type Materia = {
   foto_url: string | null;
 };
 
-const empty = {
+type Unidade = "kg" | "g" | "L" | "ml" | "un" | "caixa";
+const empty: {
+  nome: string; categoria: string; unidade: Unidade;
+  quantidade: number; estoque_minimo: number; validade: string;
+  custo_medio: number; fornecedor: string;
+} = {
   nome: "",
   categoria: "",
-  unidade: "kg" as const,
+  unidade: "kg",
   quantidade: 0,
   estoque_minimo: 0,
   validade: "",
