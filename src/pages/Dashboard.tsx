@@ -1,16 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { brl, num, diasAte } from "@/lib/format";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Banknote,
   PackageX,
   AlertTriangle,
   TrendingUp,
   CalendarClock,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  BarChart3,
+  PieChart as PieIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
 type Materia = {
   id: string;
@@ -22,8 +40,26 @@ type Materia = {
   custo_medio: number;
 };
 
+type Mov = {
+  tipo: "entrada" | "saida";
+  quantidade: number;
+  custo_unitario: number | null;
+  created_at: string;
+  materia_prima_id: string;
+  materias_primas?: { nome: string } | null;
+};
+
+function saudacao() {
+  const h = new Date().getHours();
+  if (h < 12) return "Bom dia";
+  if (h < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
 export default function Dashboard() {
+  const { profileName, user } = useAuth();
   const [materias, setMaterias] = useState<Materia[] | null>(null);
+  const [movsMes, setMovsMes] = useState<Mov[]>([]);
   const [topUsadas, setTopUsadas] = useState<{ nome: string; qtd: number }[]>([]);
 
   useEffect(() => {
@@ -33,6 +69,17 @@ export default function Dashboard() {
         .select("id,nome,unidade,quantidade,estoque_minimo,validade,custo_medio");
       setMaterias((data as any) || []);
 
+      // Movimentações do mês corrente
+      const inicioMes = new Date();
+      inicioMes.setDate(1);
+      inicioMes.setHours(0, 0, 0, 0);
+      const { data: movsM } = await supabase
+        .from("movimentacoes")
+        .select("tipo,quantidade,custo_unitario,created_at,materia_prima_id,materias_primas(nome)")
+        .gte("created_at", inicioMes.toISOString());
+      setMovsMes((movsM as any) ?? []);
+
+      // Top 5 últimos 30 dias
       const desde = new Date();
       desde.setDate(desde.getDate() - 30);
       const { data: movs } = await supabase
@@ -52,6 +99,63 @@ export default function Dashboard() {
       setTopUsadas(top);
     })();
   }, []);
+
+  const mesNome = new Date().toLocaleDateString("pt-BR", { month: "long" });
+  const primeiroNome = (profileName ?? user?.email ?? "doceira").split(" ")[0].split("@")[0];
+
+  const { entradasQtd, saidasQtd, entradasValor, saidasValor } = useMemo(() => {
+    let eq = 0, sq = 0, ev = 0, sv = 0;
+    movsMes.forEach((m) => {
+      const q = Number(m.quantidade);
+      const c = Number(m.custo_unitario ?? 0);
+      if (m.tipo === "entrada") {
+        eq += q;
+        ev += q * c;
+      } else {
+        sq += q;
+        sv += q * c;
+      }
+    });
+    return { entradasQtd: eq, saidasQtd: sq, entradasValor: ev, saidasValor: sv };
+  }, [movsMes]);
+
+  // Movimentações diárias (gráfico de barras)
+  const dadosDiarios = useMemo(() => {
+    const map = new Map<string, { dia: string; entradas: number; saidas: number }>();
+    movsMes.forEach((m) => {
+      const d = new Date(m.created_at);
+      const key = String(d.getDate()).padStart(2, "0");
+      const cur = map.get(key) ?? { dia: key, entradas: 0, saidas: 0 };
+      const q = Number(m.quantidade);
+      if (m.tipo === "entrada") cur.entradas += q;
+      else cur.saidas += q;
+      map.set(key, cur);
+    });
+    return Array.from(map.values()).sort((a, b) => Number(a.dia) - Number(b.dia));
+  }, [movsMes]);
+
+  // Distribuição de valor por matéria-prima (top 6 + outros)
+  const distribuicaoValor = useMemo(() => {
+    if (!materias) return [];
+    const itens = materias
+      .map((m) => ({ nome: m.nome, valor: Number(m.quantidade) * Number(m.custo_medio) }))
+      .filter((m) => m.valor > 0)
+      .sort((a, b) => b.valor - a.valor);
+    const top = itens.slice(0, 6);
+    const outros = itens.slice(6).reduce((s, i) => s + i.valor, 0);
+    if (outros > 0) top.push({ nome: "Outros", valor: outros });
+    return top;
+  }, [materias]);
+
+  const PIE_COLORS = [
+    "hsl(var(--primary))",
+    "hsl(var(--secondary))",
+    "hsl(var(--accent-foreground))",
+    "hsl(var(--warning))",
+    "hsl(var(--muted-foreground))",
+    "hsl(var(--destructive))",
+    "hsl(var(--border))",
+  ];
 
   if (!materias) {
     return (
@@ -75,8 +179,42 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl text-secondary">Olá, doceira! 💕</h1>
+        <h1 className="font-display text-3xl text-secondary">
+          {saudacao()}, {primeiroNome}! 💕
+        </h1>
         <p className="text-sm text-muted-foreground">Resumo do estoque hoje</p>
+      </div>
+
+      {/* Resumo do mês: entradas e saídas */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card className="shadow-card border-success/30 bg-success/5">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-success/15 text-success flex items-center justify-center">
+              <ArrowDownCircle className="h-6 w-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Entradas em {mesNome}
+              </p>
+              <p className="font-display text-2xl text-foreground">{num(entradasQtd, 3)}</p>
+              <p className="text-xs text-muted-foreground">{brl(entradasValor)} em compras</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="shadow-card border-primary/30 bg-primary/5">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-primary/20 text-secondary flex items-center justify-center">
+              <ArrowUpCircle className="h-6 w-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Saídas em {mesNome}
+              </p>
+              <p className="font-display text-2xl text-foreground">{num(saidasQtd, 3)}</p>
+              <p className="text-xs text-muted-foreground">{brl(saidasValor)} consumidos</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {(baixo.length > 0 || vencendo.length > 0 || vencidos.length > 0) && (
@@ -155,6 +293,91 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Gráficos */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="shadow-card">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="h-5 w-5 text-secondary" />
+              <h2 className="font-display text-xl text-secondary">
+                Movimentações diárias — {mesNome}
+              </h2>
+            </div>
+            {dadosDiarios.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-12 text-center">
+                Sem movimentações neste mês ainda.
+              </p>
+            ) : (
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dadosDiarios}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="dia" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "0.75rem",
+                        color: "hsl(var(--foreground))",
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="entradas" fill="hsl(var(--secondary))" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="saidas" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-card">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <PieIcon className="h-5 w-5 text-secondary" />
+              <h2 className="font-display text-xl text-secondary">Valor por matéria-prima</h2>
+            </div>
+            {distribuicaoValor.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-12 text-center">
+                Cadastre matérias-primas para ver a distribuição.
+              </p>
+            ) : (
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={distribuicaoValor}
+                      dataKey="valor"
+                      nameKey="nome"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={85}
+                      innerRadius={45}
+                      paddingAngle={2}
+                    >
+                      {distribuicaoValor.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v: any) => brl(Number(v))}
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "0.75rem",
+                        color: "hsl(var(--foreground))",
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
