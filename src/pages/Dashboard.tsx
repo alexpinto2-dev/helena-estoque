@@ -180,7 +180,7 @@ function DashCard({
           : "shadow-card hover:shadow-soft transition-shadow"
       }
     >
-      <CardContent className="p-5 flex items-center gap-4">
+      <CardContent className="p-5 flex items-center gap-4 bg-accent">
         <div
           className={
             gradient
