@@ -8,11 +8,13 @@ import {
   HelpCircle,
   Users,
   FileText,
+  Building2,
   LogOut,
 } from "lucide-react";
 
 const all = [
   { to: "/movimentacoes", label: "Movimentação", icon: ArrowLeftRight, allow: ["admin", "cozinha", "compras"] },
+  { to: "/fornecedores", label: "Fornecedores", icon: Building2, allow: ["admin", "cozinha", "compras"] },
   { to: "/receitas", label: "Receitas", icon: BookOpen, allow: ["admin", "cozinha", "compras"] },
   { to: "/relatorios", label: "Relatórios", icon: FileText, allow: ["admin", "compras"] },
   { to: "/alertas", label: "Alertas", icon: Bell, allow: ["admin", "cozinha", "compras"] },

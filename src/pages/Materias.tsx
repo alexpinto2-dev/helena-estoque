@@ -44,14 +44,17 @@ type Materia = {
   validade: string | null;
   custo_medio: number;
   fornecedor: string | null;
+  fornecedor_id: string | null;
   foto_url: string | null;
 };
+
+type Fornecedor = { id: string; nome: string };
 
 type Unidade = "kg" | "g" | "L" | "ml" | "un" | "caixa";
 const empty: {
   nome: string; categoria: string; unidade: Unidade;
   quantidade: number; estoque_minimo: number; validade: string;
-  custo_medio: number; fornecedor: string;
+  custo_medio: number; fornecedor: string; fornecedor_id: string;
 } = {
   nome: "",
   categoria: "",
@@ -61,12 +64,14 @@ const empty: {
   validade: "",
   custo_medio: 0,
   fornecedor: "",
+  fornecedor_id: "",
 };
 
 export default function Materias() {
   const { role } = useAuth();
   const isAdmin = role === "admin";
   const [items, setItems] = useState<Materia[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [open, setOpen] = useState(false);
@@ -77,13 +82,17 @@ export default function Materias() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("materias_primas")
-      .select("*")
-      .order("validade", { ascending: true, nullsFirst: false })
-      .order("nome");
+    const [{ data, error }, { data: fs }] = await Promise.all([
+      supabase
+        .from("materias_primas")
+        .select("*")
+        .order("validade", { ascending: true, nullsFirst: false })
+        .order("nome"),
+      supabase.from("fornecedores").select("id,nome").order("nome"),
+    ]);
     if (error) toast.error(error.message);
     setItems((data as any) || []);
+    setFornecedores((fs as any) || []);
     setLoading(false);
   };
 
@@ -109,6 +118,7 @@ export default function Materias() {
       validade: m.validade ?? "",
       custo_medio: Number(m.custo_medio),
       fornecedor: m.fornecedor ?? "",
+      fornecedor_id: m.fornecedor_id ?? "",
     });
     setFoto(null);
     setOpen(true);
@@ -137,6 +147,9 @@ export default function Materias() {
       const url = await uploadFoto(foto);
       if (url) foto_url = url;
     }
+    const fornecedorNome = form.fornecedor_id
+      ? (fornecedores.find((f) => f.id === form.fornecedor_id)?.nome ?? null)
+      : (form.fornecedor.trim() || null);
     const payload = {
       nome: form.nome.trim(),
       categoria: form.categoria.trim() || null,
@@ -145,7 +158,8 @@ export default function Materias() {
       estoque_minimo: Number(form.estoque_minimo),
       validade: form.validade || null,
       custo_medio: Number(form.custo_medio),
-      fornecedor: form.fornecedor.trim() || null,
+      fornecedor: fornecedorNome,
+      fornecedor_id: form.fornecedor_id || null,
       foto_url,
     };
     let err;
@@ -246,7 +260,23 @@ export default function Materias() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Fornecedor</Label>
-                  <Input value={form.fornecedor} onChange={(e) => setForm({ ...form, fornecedor: e.target.value })} />
+                  <Select
+                    value={form.fornecedor_id || "__none__"}
+                    onValueChange={(v) => setForm({ ...form, fornecedor_id: v === "__none__" ? "" : v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— Nenhum —</SelectItem>
+                      {fornecedores.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {fornecedores.length === 0 && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Cadastre fornecedores em <strong>Mais → Fornecedores</strong>.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label>Foto</Label>

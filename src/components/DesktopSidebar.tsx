@@ -9,6 +9,7 @@ import {
   Bell,
   HelpCircle,
   Users,
+  Building2,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 const allItems = [
   { to: "/", label: "Início", icon: Home, allow: ["admin", "cozinha", "compras"] },
   { to: "/materias", label: "Matérias-primas", icon: Package, allow: ["admin", "cozinha", "compras"] },
+  { to: "/fornecedores", label: "Fornecedores", icon: Building2, allow: ["admin", "cozinha", "compras"] },
   { to: "/movimentacoes", label: "Movimentação", icon: ArrowLeftRight, allow: ["admin", "cozinha", "compras"] },
   { to: "/receitas", label: "Receitas", icon: BookOpen, allow: ["admin", "cozinha", "compras"] },
   { to: "/producao", label: "Produção", icon: ChefHat, allow: ["admin", "cozinha"] },
