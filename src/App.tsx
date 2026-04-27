@@ -17,6 +17,7 @@ import Alertas from "./pages/Alertas";
 import Ajuda from "./pages/Ajuda";
 import Usuarios from "./pages/Usuarios";
 import Mais from "./pages/Mais";
+import Fornecedores from "./pages/Fornecedores";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/alertas" element={<Shell><Alertas /></Shell>} />
             <Route path="/usuarios" element={<ProtectedRoute allow={["admin"]}><AppShell><Usuarios /></AppShell></ProtectedRoute>} />
             <Route path="/ajuda" element={<Shell><Ajuda /></Shell>} />
+            <Route path="/fornecedores" element={<Shell><Fornecedores /></Shell>} />
             <Route path="/mais" element={<Shell><Mais /></Shell>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
