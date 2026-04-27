@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      fornecedores: {
+        Row: {
+          cnpj: string | null
+          contato: string | null
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          observacao: string | null
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          contato?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          observacao?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          contato?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          observacao?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       materias_primas: {
         Row: {
           categoria: string | null
@@ -21,6 +57,7 @@ export type Database = {
           custo_medio: number
           estoque_minimo: number
           fornecedor: string | null
+          fornecedor_id: string | null
           foto_url: string | null
           id: string
           nome: string
@@ -35,6 +72,7 @@ export type Database = {
           custo_medio?: number
           estoque_minimo?: number
           fornecedor?: string | null
+          fornecedor_id?: string | null
           foto_url?: string | null
           id?: string
           nome: string
@@ -49,6 +87,7 @@ export type Database = {
           custo_medio?: number
           estoque_minimo?: number
           fornecedor?: string | null
+          fornecedor_id?: string | null
           foto_url?: string | null
           id?: string
           nome?: string
@@ -57,15 +96,27 @@ export type Database = {
           updated_at?: string
           validade?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "materias_primas_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       movimentacoes: {
         Row: {
           created_at: string
           custo_unitario: number | null
+          fornecedor_id: string | null
           id: string
           materia_prima_id: string
           motivo: string | null
+          nf_arquivo_url: string | null
+          nf_data: string | null
+          nf_numero: string | null
           producao_id: string | null
           quantidade: number
           tipo: Database["public"]["Enums"]["tipo_movimentacao"]
@@ -75,9 +126,13 @@ export type Database = {
         Insert: {
           created_at?: string
           custo_unitario?: number | null
+          fornecedor_id?: string | null
           id?: string
           materia_prima_id: string
           motivo?: string | null
+          nf_arquivo_url?: string | null
+          nf_data?: string | null
+          nf_numero?: string | null
           producao_id?: string | null
           quantidade: number
           tipo: Database["public"]["Enums"]["tipo_movimentacao"]
@@ -87,9 +142,13 @@ export type Database = {
         Update: {
           created_at?: string
           custo_unitario?: number | null
+          fornecedor_id?: string | null
           id?: string
           materia_prima_id?: string
           motivo?: string | null
+          nf_arquivo_url?: string | null
+          nf_data?: string | null
+          nf_numero?: string | null
           producao_id?: string | null
           quantidade?: number
           tipo?: Database["public"]["Enums"]["tipo_movimentacao"]
@@ -97,6 +156,13 @@ export type Database = {
           validade?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "movimentacoes_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "movimentacoes_materia_prima_id_fkey"
             columns: ["materia_prima_id"]
@@ -273,18 +339,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      aplicar_movimentacao: {
-        Args: {
-          _custo_unitario: number
-          _materia_id: string
-          _motivo: string
-          _producao_id: string
-          _quantidade: number
-          _tipo: Database["public"]["Enums"]["tipo_movimentacao"]
-          _validade: string
-        }
-        Returns: string
-      }
+      aplicar_movimentacao:
+        | {
+            Args: {
+              _custo_unitario: number
+              _materia_id: string
+              _motivo: string
+              _producao_id: string
+              _quantidade: number
+              _tipo: Database["public"]["Enums"]["tipo_movimentacao"]
+              _validade: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _custo_unitario: number
+              _fornecedor_id?: string
+              _materia_id: string
+              _motivo: string
+              _nf_arquivo_url?: string
+              _nf_data?: string
+              _nf_numero?: string
+              _producao_id: string
+              _quantidade: number
+              _tipo: Database["public"]["Enums"]["tipo_movimentacao"]
+              _validade: string
+            }
+            Returns: string
+          }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
