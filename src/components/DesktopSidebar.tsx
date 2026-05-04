@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Users,
   Building2,
+  Shield,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,13 +26,17 @@ const allItems = [
   { to: "/relatorios", label: "Relatórios", icon: FileText, allow: ["admin", "compras"] },
   { to: "/alertas", label: "Alertas", icon: Bell, allow: ["admin", "cozinha", "compras"] },
   { to: "/usuarios", label: "Usuários", icon: Users, allow: ["admin"] },
+  { to: "/auditoria", label: "Auditoria", icon: Shield, allow: ["admin"], onlyMaster: true },
   { to: "/ajuda", label: "Ajuda", icon: HelpCircle, allow: ["admin", "cozinha", "compras"] },
 ];
 
 export function DesktopSidebar() {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { pathname } = useLocation();
-  const items = allItems.filter((i) => !role || i.allow.includes(role));
+  const items = allItems.filter((i) => {
+    if ((i as any).onlyMaster && user?.email !== "alexpinto2@gmail.com") return false;
+    return !role || i.allow.includes(role);
+  });
 
   return (
     <aside className="hidden md:flex md:w-64 lg:w-72 flex-col border-r border-border bg-sidebar h-screen sticky top-0">
