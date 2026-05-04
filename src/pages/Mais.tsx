@@ -9,6 +9,7 @@ import {
   Users,
   FileText,
   Building2,
+  Shield,
   LogOut,
 } from "lucide-react";
 
@@ -19,12 +20,16 @@ const all = [
   { to: "/relatorios", label: "Relatórios", icon: FileText, allow: ["admin", "compras"] },
   { to: "/alertas", label: "Alertas", icon: Bell, allow: ["admin", "cozinha", "compras"] },
   { to: "/usuarios", label: "Usuários", icon: Users, allow: ["admin"] },
+  { to: "/auditoria", label: "Auditoria", icon: Shield, allow: ["admin"], onlyMaster: true },
   { to: "/ajuda", label: "Ajuda", icon: HelpCircle, allow: ["admin", "cozinha", "compras"] },
 ];
 
 export default function Mais() {
-  const { role, signOut, profileName } = useAuth();
-  const items = all.filter((i) => !role || i.allow.includes(role));
+  const { role, signOut, profileName, user } = useAuth();
+  const items = all.filter((i) => {
+    if (i.onlyMaster && user?.email !== "alexpinto2@gmail.com") return false;
+    return !role || i.allow.includes(role);
+  });
   return (
     <div className="space-y-5">
       <div>
