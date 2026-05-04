@@ -38,8 +38,27 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { action, target_user_id, password, email } = body ?? {};
-    if (!action || !target_user_id) {
+    if (!action) {
       return new Response(JSON.stringify({ error: "Parâmetros inválidos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "list_sessions") {
+      const { data: list, error } = await admin.auth.admin.listUsers({ perPage: 1000 });
+      if (error) throw error;
+      const ids = list.users.map((u) => u.id);
+      const { data: profs } = await admin.from("profiles").select("user_id, nome").in("user_id", ids);
+      const profMap = new Map((profs || []).map((p: any) => [p.user_id, p.nome]));
+      const users = list.users.map((u) => ({
+        user_id: u.id,
+        email: u.email ?? "",
+        nome: profMap.get(u.id) ?? null,
+        last_sign_in_at: u.last_sign_in_at ?? null,
+      }));
+      return new Response(JSON.stringify({ data: { users } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (!target_user_id) {
+      return new Response(JSON.stringify({ error: "target_user_id obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (action === "reset_password") {
