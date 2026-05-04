@@ -1,0 +1,2 @@
+UPDATE public.producoes SET created_at = created_at + interval '14 days' WHERE created_at >= '2026-04-15' AND created_at < '2026-05-01';
+UPDATE public.producoes SET created_at = '2026-05-01'::timestamptz + (random() * interval '3 days') WHERE created_at < '2026-05-01';
